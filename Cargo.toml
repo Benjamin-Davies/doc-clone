@@ -2,6 +2,8 @@
 name = "doc-clone"
 version = "0.0.1-rc.1"
 edition = "2021"
+description = "TODO"
+license = "MIT"
 
 [dependencies]
 clap = { version = "3.2.16", features = ["derive"] }
