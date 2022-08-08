@@ -2,7 +2,7 @@
 name = "doc-clone"
 version = "0.0.1-rc.1"
 edition = "2021"
-description = "TODO"
+description = "A utility for duplicating doc comments across files."
 license = "MIT"
 
 [dependencies]
