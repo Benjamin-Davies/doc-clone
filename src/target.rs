@@ -5,6 +5,8 @@ use std::{
     path::Path,
 };
 
+use crate::constants::{DOC_CLONE_ATTR, JAVADOC_COMMENT_LINE_DELIMETER};
+
 pub fn substitute(
     path: &Path,
     sources: &HashMap<String, Vec<String>>,
@@ -14,8 +16,6 @@ pub fn substitute(
     let path = std::env::current_dir()?.join(path);
     File::open(&path)?.read_to_string(&mut input)?;
     let mut output = String::with_capacity(input.len());
-
-    const DOC_CLONE_ATTR: &'static str = "@doc-clone:";
 
     let mut cursor = 0;
     while let Some(attr_offset) = input[cursor..].find(DOC_CLONE_ATTR) {
@@ -29,7 +29,7 @@ pub fn substitute(
             let length = DOC_CLONE_ATTR.len() + key.len();
 
             if let Some(source) = sources.get(key) {
-                output.push_str(&source.join("\n * "));
+                output.push_str(&source.join(JAVADOC_COMMENT_LINE_DELIMETER));
             }
 
             cursor = attr_index + length;

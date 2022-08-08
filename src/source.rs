@@ -6,6 +6,11 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::{
+    constants::{DOC_CLONE_SOURCE_ATTR, RUSTDOC_COMMENT_PREFIX},
+    helpers::is_cache_dir,
+};
+
 pub fn scan(paths: &[PathBuf]) -> io::Result<HashMap<String, Vec<String>>> {
     let mut sources = HashMap::new();
 
@@ -18,6 +23,11 @@ pub fn scan(paths: &[PathBuf]) -> io::Result<HashMap<String, Vec<String>>> {
 
 // TODO: should this be using recursion?
 fn traverse(path: &Path, sources: &mut HashMap<String, Vec<String>>) -> io::Result<()> {
+    // Skip dot-files
+    if path.file_name().unwrap().to_string_lossy().starts_with(".") {
+        return Ok(());
+    }
+
     let metadata = path.metadata()?;
     if metadata.is_file() {
         if path.extension() == Some(OsStr::new("rs")) {
@@ -31,27 +41,12 @@ fn traverse(path: &Path, sources: &mut HashMap<String, Vec<String>>) -> io::Resu
     Ok(())
 }
 
-fn is_cache_dir(path: &Path) -> io::Result<bool> {
-    const SIGNATURE: &'static [u8] = b"Signature: 8a477f597d28d172789f06886806bc55";
-    let tag_path = path.join("CACHEDIR.TAG");
-    if tag_path.is_file() {
-        let mut file = File::open(tag_path)?;
-        let mut buf = [0; SIGNATURE.len()];
-        file.read(&mut buf)?;
-        if buf == SIGNATURE {
-            return Ok(true);
-        }
-    }
-    Ok(false)
-}
-
 fn scan_file(path: &Path, sources: &mut HashMap<String, Vec<String>>) -> io::Result<()> {
     let mut contents = String::new();
     File::open(path)?.read_to_string(&mut contents)?;
 
     let mut lines = contents.lines();
     while let Some(line) = lines.next() {
-        const DOC_CLONE_SOURCE_ATTR: &'static str = "@doc-clone-source:";
         // TODO: extract into parse_clone_source_attr
         if let Some(line) = parse_doc_comment(line) {
             if let Some(index) = line.find(DOC_CLONE_SOURCE_ATTR) {
@@ -80,15 +75,10 @@ fn scan_comment<'a>(
     sources.insert(key.to_owned(), docs);
 }
 
-/// @doc-clone-source:foo
-/// Some
-/// More
-/// Lines
 fn parse_doc_comment(line: &str) -> Option<&str> {
-    const PREFIX: &'static str = "///";
     let line = line.trim_start();
-    if line.starts_with(PREFIX) {
-        Some(line[PREFIX.len()..].trim())
+    if line.starts_with(RUSTDOC_COMMENT_PREFIX) {
+        Some(line[RUSTDOC_COMMENT_PREFIX.len()..].trim())
     } else {
         None
     }
