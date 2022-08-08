@@ -3,6 +3,7 @@ use std::{borrow::Cow, env::current_dir, path::PathBuf};
 use clap::Parser;
 
 mod source;
+mod target;
 
 #[derive(Parser, Debug)]
 // TODO: author, version, etc.
@@ -24,7 +25,9 @@ fn main() {
     } else {
         Cow::Owned(vec![current_dir().unwrap()])
     };
-    let sources = source::scan(source_paths.as_ref());
+    let sources = source::scan(source_paths.as_ref()).unwrap();
 
-    println!("{:?}", sources);
+    for target_file in args.target_files {
+        target::substitute(&target_file, &sources, args.in_place).unwrap();
+    }
 }
