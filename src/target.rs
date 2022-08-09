@@ -1,14 +1,11 @@
 use std::{
     collections::HashMap,
-    fs::File,
+    fs::{self, File},
     io::{self, Write},
     path::Path,
 };
 
-use crate::{
-    constants::{DOC_CLONE_ATTR, JAVADOC_COMMENT_LINE_DELIMETER},
-    utils::read_to_string,
-};
+use crate::constants::{DOC_CLONE_ATTR, JAVADOC_COMMENT_LINE_DELIMETER};
 
 pub fn substitute(
     path: &Path,
@@ -16,7 +13,7 @@ pub fn substitute(
     in_place: bool,
 ) -> io::Result<()> {
     let path = std::env::current_dir()?.join(path);
-    let input = read_to_string(&path)?;
+    let input = fs::read_to_string(&path)?;
     let mut output = String::with_capacity(input.len());
 
     let mut cursor = 0;
@@ -54,7 +51,7 @@ pub fn substitute(
 mod tests {
     use std::{collections::HashMap, fs};
 
-    use crate::utils::{read_to_string, tests::example_lines};
+    use crate::utils::tests::example_lines;
 
     use super::substitute;
 
@@ -70,7 +67,7 @@ mod tests {
         substitute(&path, &sources, true).unwrap();
 
         assert_eq!(
-            read_to_string(path).unwrap(),
+            fs::read_to_string(path).unwrap(),
             include_str!("../examples/expected.c")
         );
     }

@@ -8,7 +8,6 @@ use std::{
 use crate::{
     constants::{DOC_CLONE_SOURCE_ATTR, RUSTDOC_COMMENT_PREFIX},
     helpers::is_cache_dir,
-    utils::read_to_string,
 };
 
 pub fn scan(paths: &[PathBuf]) -> io::Result<HashMap<String, Vec<String>>> {
@@ -45,7 +44,7 @@ fn traverse(path: &Path, sources: &mut HashMap<String, Vec<String>>) -> io::Resu
 }
 
 fn scan_file(path: &Path, sources: &mut HashMap<String, Vec<String>>) -> io::Result<()> {
-    let contents = read_to_string(path)?;
+    let contents = fs::read_to_string(path)?;
 
     let mut lines = contents.lines();
     while let Some(line) = lines.next() {
