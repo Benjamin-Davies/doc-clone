@@ -25,9 +25,8 @@ fn traverse(path: &Path, sources: &mut HashMap<String, Vec<String>>) -> io::Resu
     let mut stack = vec![path.to_owned()];
 
     while let Some(path) = stack.pop() {
-        // Skip dot-files
-        if path.file_name().unwrap().to_string_lossy().starts_with(".") {
-            return Ok(());
+        if is_hidden_file(&path) {
+            continue;
         }
 
         let metadata = path.metadata()?;
@@ -89,6 +88,14 @@ fn parse_doc_comment(line: &str) -> Option<&str> {
     }
 }
 
+fn is_hidden_file(path: &PathBuf) -> bool {
+    if let Some(s) = path.file_name() {
+        s.to_string_lossy().starts_with(".")
+    } else {
+        false
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::utils::tests::example_lines;
@@ -98,6 +105,13 @@ mod tests {
     #[test]
     fn scan_example() {
         let sources = scan(&["examples".into()]).unwrap();
+
+        assert_eq!(sources.get("foo"), Some(&example_lines()));
+    }
+
+    #[test]
+    fn scan_parent_dir() {
+        let sources = scan(&["examples/dir/..".into()]).unwrap();
 
         assert_eq!(sources.get("foo"), Some(&example_lines()));
     }
