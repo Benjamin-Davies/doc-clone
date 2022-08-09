@@ -50,16 +50,8 @@ fn scan_file(path: &Path, sources: &mut HashMap<String, Vec<String>>) -> io::Res
 
     let mut lines = contents.lines();
     while let Some(line) = lines.next() {
-        // TODO: extract into parse_clone_source_attr
-        if let Some(line) = parse_doc_comment(line) {
-            if let Some(index) = line.find(DOC_CLONE_SOURCE_ATTR) {
-                if let Some(key) = line[index + DOC_CLONE_SOURCE_ATTR.len()..]
-                    .split_ascii_whitespace()
-                    .next()
-                {
-                    scan_comment(key, &mut lines, sources);
-                }
-            }
+        if let Some(key) = parse_source_attr(line) {
+            scan_comment(key, &mut lines, sources);
         }
     }
 
@@ -76,6 +68,16 @@ fn scan_comment<'a>(
         docs.push(line.to_owned());
     }
     sources.insert(key.to_owned(), docs);
+}
+
+fn parse_source_attr(line: &str) -> Option<&str> {
+    parse_doc_comment(line).and_then(|line| {
+        line.find(DOC_CLONE_SOURCE_ATTR).and_then(|index| {
+            line[index + DOC_CLONE_SOURCE_ATTR.len()..]
+                .split_ascii_whitespace()
+                .next()
+        })
+    })
 }
 
 fn parse_doc_comment(line: &str) -> Option<&str> {
