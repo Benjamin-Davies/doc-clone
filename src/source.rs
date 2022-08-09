@@ -21,23 +21,27 @@ pub fn scan(paths: &[PathBuf]) -> io::Result<HashMap<String, Vec<String>>> {
     Ok(sources)
 }
 
-// TODO: should this be using recursion?
 fn traverse(path: &Path, sources: &mut HashMap<String, Vec<String>>) -> io::Result<()> {
-    // Skip dot-files
-    if path.file_name().unwrap().to_string_lossy().starts_with(".") {
-        return Ok(());
+    let mut stack = vec![path.to_owned()];
+
+    while let Some(path) = stack.pop() {
+        // Skip dot-files
+        if path.file_name().unwrap().to_string_lossy().starts_with(".") {
+            return Ok(());
+        }
+
+        let metadata = path.metadata()?;
+        if metadata.is_file() {
+            if path.extension() == Some(OsStr::new("rs")) {
+                scan_file(&path, sources)?;
+            }
+        } else if metadata.is_dir() && !is_cache_dir(&path)? {
+            for child in fs::read_dir(path)? {
+                stack.push(child?.path());
+            }
+        }
     }
 
-    let metadata = path.metadata()?;
-    if metadata.is_file() {
-        if path.extension() == Some(OsStr::new("rs")) {
-            scan_file(path, sources)?;
-        }
-    } else if metadata.is_dir() && !is_cache_dir(path)? {
-        for child in fs::read_dir(path)? {
-            traverse(&child?.path(), sources)?;
-        }
-    }
     Ok(())
 }
 
