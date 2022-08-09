@@ -1,20 +1,22 @@
 use std::{
     collections::HashMap,
     fs::File,
-    io::{self, Read, Write},
+    io::{self, Write},
     path::Path,
 };
 
-use crate::constants::{DOC_CLONE_ATTR, JAVADOC_COMMENT_LINE_DELIMETER};
+use crate::{
+    constants::{DOC_CLONE_ATTR, JAVADOC_COMMENT_LINE_DELIMETER},
+    utils::read_to_string,
+};
 
 pub fn substitute(
     path: &Path,
     sources: &HashMap<String, Vec<String>>,
     in_place: bool,
 ) -> io::Result<()> {
-    let mut input = String::new();
     let path = std::env::current_dir()?.join(path);
-    File::open(&path)?.read_to_string(&mut input)?;
+    let input = read_to_string(&path)?;
     let mut output = String::with_capacity(input.len());
 
     let mut cursor = 0;
@@ -46,4 +48,30 @@ pub fn substitute(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{collections::HashMap, fs};
+
+    use crate::utils::{read_to_string, tests::example_lines};
+
+    use super::substitute;
+
+    #[test]
+    fn substitute_example() {
+        let mut sources = HashMap::new();
+        sources.insert("foo".to_owned(), example_lines());
+
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("test.c");
+        fs::copy("examples/input.c", &path).unwrap();
+
+        substitute(&path, &sources, true).unwrap();
+
+        assert_eq!(
+            read_to_string(path).unwrap(),
+            include_str!("../examples/expected.c")
+        );
+    }
 }

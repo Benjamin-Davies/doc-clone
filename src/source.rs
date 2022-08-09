@@ -1,14 +1,14 @@
 use std::{
     collections::HashMap,
     ffi::OsStr,
-    fs::{self, File},
-    io::{self, Read},
+    fs, io,
     path::{Path, PathBuf},
 };
 
 use crate::{
     constants::{DOC_CLONE_SOURCE_ATTR, RUSTDOC_COMMENT_PREFIX},
     helpers::is_cache_dir,
+    utils::read_to_string,
 };
 
 pub fn scan(paths: &[PathBuf]) -> io::Result<HashMap<String, Vec<String>>> {
@@ -42,8 +42,7 @@ fn traverse(path: &Path, sources: &mut HashMap<String, Vec<String>>) -> io::Resu
 }
 
 fn scan_file(path: &Path, sources: &mut HashMap<String, Vec<String>>) -> io::Result<()> {
-    let mut contents = String::new();
-    File::open(path)?.read_to_string(&mut contents)?;
+    let contents = read_to_string(path)?;
 
     let mut lines = contents.lines();
     while let Some(line) = lines.next() {
@@ -81,5 +80,19 @@ fn parse_doc_comment(line: &str) -> Option<&str> {
         Some(line[RUSTDOC_COMMENT_PREFIX.len()..].trim())
     } else {
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::utils::tests::example_lines;
+
+    use super::scan;
+
+    #[test]
+    fn scan_example() {
+        let sources = scan(&["examples".into()]).unwrap();
+
+        assert_eq!(sources.get("foo"), Some(&example_lines()));
     }
 }

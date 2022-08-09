@@ -6,6 +6,7 @@ mod constants;
 mod helpers;
 mod source;
 mod target;
+mod utils;
 
 #[derive(Parser, Debug)]
 #[clap(version, about)]
