@@ -38,10 +38,15 @@ fn main() {
         target::substitute(&target_file, &sources, &mut used_sources, args.in_place).unwrap();
     }
 
-    for (key, (path, _)) in sources
+    for (key, (path, line, _)) in sources
         .iter()
         .filter(|(k, _)| !used_sources.contains(&k as &str))
     {
-        eprintln!("::warning file={}::Unused key: {}", path.display(), key);
+        eprintln!(
+            "::warning file={},line={}::Unused key: {}",
+            path.display(),
+            line,
+            key
+        );
     }
 }
