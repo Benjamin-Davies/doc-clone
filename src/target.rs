@@ -29,6 +29,8 @@ pub fn substitute(
 
             if let Some(source) = sources.get(key) {
                 output.push_str(&source.join(JAVADOC_COMMENT_LINE_DELIMETER));
+            } else {
+                eprintln!("::warning file={}::Undefined key: {}", path.display(), key);
             }
 
             cursor = attr_index + length;
