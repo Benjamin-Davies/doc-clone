@@ -1,15 +1,16 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fs::{self, File},
     io::{self, Write},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use crate::constants::{DOC_CLONE_ATTR, JAVADOC_COMMENT_LINE_DELIMETER};
 
 pub fn substitute(
     path: &Path,
-    sources: &HashMap<String, Vec<String>>,
+    sources: &HashMap<String, (PathBuf, Vec<String>)>,
+    used_sources: &mut HashSet<String>,
     in_place: bool,
 ) -> io::Result<()> {
     let path = std::env::current_dir()?.join(path);
@@ -27,8 +28,9 @@ pub fn substitute(
         {
             let length = DOC_CLONE_ATTR.len() + key.len();
 
-            if let Some(source) = sources.get(key) {
+            if let Some((_, source)) = sources.get(key) {
                 output.push_str(&source.join(JAVADOC_COMMENT_LINE_DELIMETER));
+                used_sources.insert(key.to_owned());
             } else {
                 eprintln!("::warning file={}::Undefined key: {}", path.display(), key);
             }
@@ -51,7 +53,10 @@ pub fn substitute(
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, fs};
+    use std::{
+        collections::{HashMap, HashSet},
+        fs,
+    };
 
     use crate::utils::tests::example_lines;
 
@@ -60,17 +65,36 @@ mod tests {
     #[test]
     fn substitute_example() {
         let mut sources = HashMap::new();
-        sources.insert("foo".to_owned(), example_lines());
+        sources.insert("foo".to_owned(), ("".into(), example_lines()));
 
         let temp = tempfile::tempdir().unwrap();
         let path = temp.path().join("test.c");
         fs::copy("examples/input.c", &path).unwrap();
 
-        substitute(&path, &sources, true).unwrap();
+        substitute(&path, &sources, &mut HashSet::new(), true).unwrap();
 
         assert_eq!(
             fs::read_to_string(path).unwrap(),
             include_str!("../examples/expected.c")
         );
+    }
+
+    #[test]
+    fn record_usages() {
+        let mut sources = HashMap::new();
+        sources.insert("foo".to_owned(), ("".into(), example_lines()));
+        let mut used_sources = HashSet::new();
+
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("test.c");
+        fs::copy("examples/input.c", &path).unwrap();
+
+        substitute(&path, &sources, &mut used_sources, true).unwrap();
+
+        assert_eq!(
+            fs::read_to_string(path).unwrap(),
+            include_str!("../examples/expected.c")
+        );
+        assert!(used_sources.contains("foo"));
     }
 }

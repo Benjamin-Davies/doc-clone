@@ -1,4 +1,4 @@
-use std::{borrow::Cow, env::current_dir, path::PathBuf};
+use std::{borrow::Cow, collections::HashSet, env::current_dir, path::PathBuf};
 
 use clap::Parser;
 
@@ -33,7 +33,15 @@ fn main() {
     };
     let sources = source::scan(source_paths.as_ref()).unwrap();
 
+    let mut used_sources = HashSet::<String>::new();
     for target_file in args.target_files {
-        target::substitute(&target_file, &sources, args.in_place).unwrap();
+        target::substitute(&target_file, &sources, &mut used_sources, args.in_place).unwrap();
+    }
+
+    for (key, (path, _)) in sources
+        .iter()
+        .filter(|(k, _)| !used_sources.contains(&k as &str))
+    {
+        eprintln!("::warning file={}::Unused key: {}", path.display(), key);
     }
 }

@@ -10,7 +10,7 @@ use crate::{
     helpers::is_cache_dir,
 };
 
-pub fn scan(paths: &[PathBuf]) -> io::Result<HashMap<String, Vec<String>>> {
+pub fn scan(paths: &[PathBuf]) -> io::Result<HashMap<String, (PathBuf, Vec<String>)>> {
     let mut sources = HashMap::new();
 
     for path in paths {
@@ -20,7 +20,7 @@ pub fn scan(paths: &[PathBuf]) -> io::Result<HashMap<String, Vec<String>>> {
     Ok(sources)
 }
 
-fn traverse(path: &Path, sources: &mut HashMap<String, Vec<String>>) -> io::Result<()> {
+fn traverse(path: &Path, sources: &mut HashMap<String, (PathBuf, Vec<String>)>) -> io::Result<()> {
     let mut stack = vec![path.to_owned()];
 
     while let Some(path) = stack.pop() {
@@ -43,29 +43,26 @@ fn traverse(path: &Path, sources: &mut HashMap<String, Vec<String>>) -> io::Resu
     Ok(())
 }
 
-fn scan_file(path: &Path, sources: &mut HashMap<String, Vec<String>>) -> io::Result<()> {
+fn scan_file(path: &Path, sources: &mut HashMap<String, (PathBuf, Vec<String>)>) -> io::Result<()> {
     let contents = fs::read_to_string(path)?;
 
     let mut lines = contents.lines();
     while let Some(line) = lines.next() {
         if let Some(key) = parse_source_attr(line) {
-            scan_comment(key, &mut lines, sources);
+            let docs = scan_comment(&mut lines);
+            sources.insert(key.to_string(), (path.to_owned(), docs));
         }
     }
 
     Ok(())
 }
 
-fn scan_comment<'a>(
-    key: &str,
-    mut lines: impl Iterator<Item = &'a str>,
-    sources: &mut HashMap<String, Vec<String>>,
-) {
+fn scan_comment<'a>(mut lines: impl Iterator<Item = &'a str>) -> Vec<String> {
     let mut docs = Vec::new();
     while let Some(line) = lines.next().and_then(parse_doc_comment) {
         docs.push(line.to_owned());
     }
-    sources.insert(key.to_owned(), docs);
+    docs
 }
 
 fn parse_source_attr(line: &str) -> Option<&str> {
@@ -105,13 +102,16 @@ mod tests {
     fn scan_example() {
         let sources = scan(&["examples".into()]).unwrap();
 
-        assert_eq!(sources.get("foo"), Some(&example_lines()));
+        assert_eq!(
+            sources.get("foo"),
+            Some(&("examples/example.rs".into(), example_lines()))
+        );
     }
 
     #[test]
     fn scan_parent_dir() {
         let sources = scan(&["examples/dir/..".into()]).unwrap();
 
-        assert_eq!(sources.get("foo"), Some(&example_lines()));
+        assert_eq!(sources.get("foo").unwrap().1, example_lines());
     }
 }
