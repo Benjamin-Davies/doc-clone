@@ -72,7 +72,7 @@ dependencies = [
 
 [[package]]
 name = "doc-clone"
-version = "0.0.3"
+version = "0.0.5"
 dependencies = [
  "clap",
  "tempfile",
