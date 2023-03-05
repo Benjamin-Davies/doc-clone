@@ -1,6 +1,12 @@
-use std::{borrow::Cow, collections::HashSet, env::current_dir, path::PathBuf};
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+    env::current_dir,
+    path::PathBuf,
+};
 
 use clap::Parser;
+use utils::Warning;
 
 mod constants;
 mod helpers;
@@ -19,11 +25,16 @@ struct Args {
     #[clap(short, long)]
     in_place: bool,
 
+    /// Replace warnings with errors.
+    #[clap(short, long)]
+    error: bool,
+
     /// Files containing the @doc-clone attributes that are to be substituted.
     target_files: Vec<PathBuf>,
 }
 
 fn main() {
+    let mut has_warnings = false;
     let args = Args::parse();
 
     let source_paths = if args.source_path.len() > 0 {
@@ -35,18 +46,36 @@ fn main() {
 
     let mut used_sources = HashSet::<String>::new();
     for target_file in args.target_files {
-        target::substitute(&target_file, &sources, &mut used_sources, args.in_place).unwrap();
+        let warnings =
+            target::substitute(&target_file, &sources, &mut used_sources, args.in_place).unwrap();
+        for warning in warnings {
+            warning.print(args.error);
+            has_warnings = true;
+        }
     }
 
-    for (key, (path, line, _)) in sources
+    let warnings = unused_sources(&sources, &used_sources);
+    for warning in warnings {
+        warning.print(args.error);
+        has_warnings = true;
+    }
+
+    if has_warnings && args.error {
+        panic!("Encountered one or more errors");
+    }
+}
+
+fn unused_sources(
+    sources: &HashMap<String, (PathBuf, usize, Vec<String>)>,
+    used_sources: &HashSet<String>,
+) -> Vec<Warning> {
+    sources
         .iter()
         .filter(|(k, _)| !used_sources.contains(&k as &str))
-    {
-        eprintln!(
-            "::warning file={},line={}::Unused key: {}",
-            path.display(),
-            line,
-            key
-        );
-    }
+        .map(|(key, (path, line, _))| Warning {
+            path: path.clone(),
+            line: *line,
+            content: format!("Unused key: {}", key),
+        })
+        .collect()
 }

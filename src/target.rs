@@ -5,18 +5,22 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::constants::{DOC_CLONE_ATTR, JAVADOC_COMMENT_LINE_DELIMETER};
+use crate::{
+    constants::{DOC_CLONE_ATTR, JAVADOC_COMMENT_LINE_DELIMETER},
+    utils::Warning,
+};
 
 pub fn substitute(
     path: &Path,
     sources: &HashMap<String, (PathBuf, usize, Vec<String>)>,
     used_sources: &mut HashSet<String>,
     in_place: bool,
-) -> io::Result<()> {
+) -> io::Result<Vec<Warning>> {
     let path = std::env::current_dir()?.join(path);
     let input = fs::read_to_string(&path)?;
     let mut line = 1;
     let mut output = String::with_capacity(input.len());
+    let mut warnings = Vec::new();
 
     let mut cursor = 0;
     while let Some(attr_offset) = input[cursor..].find(DOC_CLONE_ATTR) {
@@ -37,12 +41,11 @@ pub fn substitute(
                 output.push_str(&source.join(JAVADOC_COMMENT_LINE_DELIMETER));
                 used_sources.insert(key.to_owned());
             } else {
-                eprintln!(
-                    "::warning file={},line={}::Undefined key: {}",
-                    path.display(),
+                warnings.push(Warning {
+                    path: path.clone(),
                     line,
-                    key
-                );
+                    content: format!("Undefined key: {key}"),
+                })
             }
 
             cursor = attr_index + length;
@@ -58,7 +61,7 @@ pub fn substitute(
         print!("{}", output);
     }
 
-    Ok(())
+    Ok(warnings)
 }
 
 #[cfg(test)]
