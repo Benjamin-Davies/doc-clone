@@ -9,7 +9,7 @@ repository = "https://github.com/Benjamin-Davies/doc-clone"
 
 
 [dependencies]
-clap = { version = "3.2.16", features = ["derive"] }
+clap = { version = "4.3.19", features = ["derive"] }
 
 [dev-dependencies]
-tempfile = "3.3.0"
+tempfile = "3.7.0"
