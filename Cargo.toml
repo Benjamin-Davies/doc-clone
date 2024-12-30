@@ -1,12 +1,11 @@
 [package]
 name = "doc-clone"
-version = "0.0.7"
+version = "0.0.8"
 edition = "2021"
 description = "A utility for duplicating doc comments across files."
 license = "MIT"
 homepage = "https://github.com/Benjamin-Davies/doc-clone"
 repository = "https://github.com/Benjamin-Davies/doc-clone"
-
 
 [dependencies]
 clap = { version = "4.3.19", features = ["derive"] }
